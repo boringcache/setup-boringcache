@@ -1,0 +1,200 @@
+"use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", { value: true });
+const core = __importStar(require("@actions/core"));
+const exec = __importStar(require("@actions/exec"));
+const tc = __importStar(require("@actions/tool-cache"));
+const crypto = __importStar(require("crypto"));
+const fs = __importStar(require("fs"));
+const os = __importStar(require("os"));
+const path = __importStar(require("path"));
+const checksums_1 = require("./checksums");
+const TOOL_NAME = 'boringcache';
+const GITHUB_RELEASES_BASE = 'https://github.com/boringcache/cli/releases/download';
+function getPlatformInfo() {
+    const runnerOS = process.env.RUNNER_OS || os.platform();
+    const runnerArch = process.env.RUNNER_ARCH || os.arch();
+    let normalizedOS = runnerOS;
+    let normalizedArch = runnerArch;
+    if (runnerOS === 'darwin' || runnerOS === 'Darwin') {
+        normalizedOS = 'macOS';
+    }
+    else if (runnerOS === 'win32' || runnerOS === 'Windows') {
+        normalizedOS = 'Windows';
+    }
+    else if (runnerOS === 'linux' || runnerOS === 'Linux') {
+        normalizedOS = 'Linux';
+    }
+    if (runnerArch === 'x64' || runnerArch === 'X64' || runnerArch === 'amd64') {
+        normalizedArch = 'X64';
+    }
+    else if (runnerArch === 'arm64' || runnerArch === 'ARM64' || runnerArch === 'aarch64') {
+        normalizedArch = 'ARM64';
+    }
+    const isWindows = normalizedOS === 'Windows';
+    let assetName;
+    switch (normalizedOS) {
+        case 'Linux':
+            assetName = normalizedArch === 'ARM64' ? 'boringcache-linux-arm64' : 'boringcache-linux-amd64';
+            break;
+        case 'macOS':
+            assetName = 'boringcache-macos-14-arm64';
+            break;
+        case 'Windows':
+            assetName = 'boringcache-windows-2022-amd64.exe';
+            break;
+        default:
+            throw new Error(`Unsupported platform: OS=${runnerOS}, ARCH=${runnerArch}`);
+    }
+    return {
+        os: normalizedOS.toLowerCase(),
+        arch: normalizedArch.toLowerCase(),
+        assetName,
+        isWindows,
+    };
+}
+function getDownloadUrl(version, assetName) {
+    return `${GITHUB_RELEASES_BASE}/${version}/${assetName}`;
+}
+async function verifyFileChecksum(filePath, expectedChecksum) {
+    const fileBuffer = await fs.promises.readFile(filePath);
+    const hash = crypto.createHash('sha256');
+    hash.update(fileBuffer);
+    const actualChecksum = hash.digest('hex');
+    if (actualChecksum !== expectedChecksum) {
+        throw new Error(`Checksum verification failed. Expected: ${expectedChecksum}, Actual: ${actualChecksum}`);
+    }
+    core.info(`Checksum verified: ${actualChecksum}`);
+}
+async function downloadAndInstall(version, platform, verifyChecksumEnabled) {
+    const downloadUrl = getDownloadUrl(version, platform.assetName);
+    core.info(`Downloading BoringCache CLI from: ${downloadUrl}`);
+    const downloadedPath = await tc.downloadTool(downloadUrl);
+    if (verifyChecksumEnabled) {
+        const expectedChecksum = (0, checksums_1.getChecksum)(version, platform.assetName);
+        if (expectedChecksum) {
+            core.info('Verifying checksum...');
+            await verifyFileChecksum(downloadedPath, expectedChecksum);
+        }
+        else if ((0, checksums_1.hasChecksums)(version)) {
+            core.warning(`No checksum available for asset '${platform.assetName}' in version ${version}`);
+        }
+        else {
+            core.warning(`No checksums available for version ${version}`);
+        }
+    }
+    const binaryName = platform.isWindows ? 'boringcache.exe' : 'boringcache';
+    const installDir = path.join(os.tmpdir(), 'boringcache-install', version);
+    await fs.promises.mkdir(installDir, { recursive: true });
+    const binaryPath = path.join(installDir, binaryName);
+    await fs.promises.copyFile(downloadedPath, binaryPath);
+    if (!platform.isWindows) {
+        await fs.promises.chmod(binaryPath, 0o755);
+    }
+    const cachedPath = await tc.cacheDir(installDir, TOOL_NAME, version.replace(/^v/, ''));
+    return cachedPath;
+}
+async function getInstalledVersion(binaryPath) {
+    let output = '';
+    try {
+        await exec.exec(binaryPath, ['--version'], {
+            silent: true,
+            listeners: {
+                stdout: (data) => {
+                    output += data.toString();
+                },
+            },
+        });
+        const match = output.match(/(\d+\.\d+\.\d+)/);
+        return match ? match[1] : output.trim();
+    }
+    catch {
+        return 'unknown';
+    }
+}
+async function run() {
+    try {
+        const version = core.getInput('version') || 'v1.0.0';
+        const token = core.getInput('token');
+        const skipCache = core.getInput('skip-cache') === 'true';
+        const verifyChecksumEnabled = core.getInput('verify-checksum') !== 'false';
+        const normalizedVersion = version.startsWith('v') ? version : `v${version}`;
+        core.info(`Setting up BoringCache CLI ${normalizedVersion}`);
+        const platform = getPlatformInfo();
+        core.info(`Platform: ${platform.os} ${platform.arch}`);
+        core.info(`Asset: ${platform.assetName}`);
+        let toolPath;
+        let cacheHit = false;
+        if (!skipCache) {
+            const cachedPath = tc.find(TOOL_NAME, normalizedVersion.replace(/^v/, ''));
+            if (cachedPath) {
+                core.info(`Found cached BoringCache CLI at: ${cachedPath}`);
+                toolPath = cachedPath;
+                cacheHit = true;
+            }
+            else {
+                core.info('BoringCache CLI not found in cache, downloading...');
+                toolPath = await downloadAndInstall(normalizedVersion, platform, verifyChecksumEnabled);
+            }
+        }
+        else {
+            core.info('Skipping cache, downloading fresh binary...');
+            toolPath = await downloadAndInstall(normalizedVersion, platform, verifyChecksumEnabled);
+        }
+        core.addPath(toolPath);
+        core.info(`Added ${toolPath} to PATH`);
+        if (token) {
+            core.setSecret(token);
+            core.exportVariable('BORINGCACHE_API_TOKEN', token);
+            core.info('BORINGCACHE_API_TOKEN environment variable set');
+        }
+        const binaryName = platform.isWindows ? 'boringcache.exe' : 'boringcache';
+        const binaryPath = path.join(toolPath, binaryName);
+        const installedVersion = await getInstalledVersion(binaryPath);
+        core.info(`BoringCache CLI ${installedVersion} installed successfully`);
+        core.setOutput('version', installedVersion);
+        core.setOutput('path', binaryPath);
+        core.setOutput('cache-hit', cacheHit.toString());
+    }
+    catch (error) {
+        if (error instanceof Error) {
+            core.setFailed(error.message);
+        }
+        else {
+            core.setFailed('An unexpected error occurred');
+        }
+    }
+}
+run();
