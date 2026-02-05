@@ -1,0 +1,37 @@
+{
+  "name": "setup-boringcache",
+  "version": "1.0.0",
+  "description": "GitHub Action to install the BoringCache CLI with version pinning and checksum verification",
+  "main": "dist/setup/index.js",
+  "scripts": {
+    "build": "tsc && ncc build lib/setup.ts -o dist/setup",
+    "package": "ncc build lib/setup.ts -o dist/setup",
+    "test": "jest",
+    "test:ci": "jest --ci --coverage"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/boringcache/setup-boringcache.git"
+  },
+  "keywords": [
+    "actions",
+    "setup",
+    "boringcache",
+    "cli"
+  ],
+  "author": "BoringCache",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/exec": "^1.1.1",
+    "@actions/tool-cache": "^2.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/node": "^20.19.28",
+    "@vercel/ncc": "^0.38.1",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.4.6",
+    "typescript": "^5.9.3"
+  }
+}

@@ -1,0 +1,32 @@
+name: 'Setup BoringCache'
+description: 'Cache once. Reuse everywhere. Install the BoringCache CLI with version pinning and checksum verification.'
+author: 'BoringCache'
+inputs:
+  version:
+    description: 'BoringCache CLI version to install (e.g., v1.0.0)'
+    required: false
+    default: 'v1.0.0'
+  token:
+    description: 'BoringCache API token. If provided, sets BORINGCACHE_API_TOKEN environment variable.'
+    required: false
+  skip-cache:
+    description: 'Skip using the tool cache (always download fresh binary)'
+    required: false
+    default: 'false'
+  verify-checksum:
+    description: 'Verify SHA256 checksum of downloaded binary (recommended)'
+    required: false
+    default: 'true'
+outputs:
+  version:
+    description: 'The installed version of BoringCache CLI'
+  path:
+    description: 'Path to the installed BoringCache binary'
+  cache-hit:
+    description: 'Whether the binary was restored from tool cache'
+runs:
+  using: 'node24'
+  main: 'dist/setup/index.js'
+branding:
+  icon: 'download'
+  color: 'blue'
