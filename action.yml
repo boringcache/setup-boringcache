@@ -3,7 +3,7 @@ description: 'Install the BoringCache CLI with version pinning, checksum verific
 author: 'BoringCache'
 inputs:
   version:
-    description: 'Version of BoringCache CLI to install (e.g., v1.0.0). Defaults to v1.0.0.'
+    description: 'BoringCache CLI version to install (e.g., v1.0.0)'
     required: false
     default: 'v1.0.0'
   token:
