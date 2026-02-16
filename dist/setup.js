@@ -54,7 +54,6 @@ function detectLinuxDistro() {
         for (const line of lines) {
             const match = line.match(/^(\w+)=(.*)$/);
             if (match) {
-                // Strip surrounding quotes
                 fields[match[1]] = match[2].replace(/^["']|["']$/g, '');
             }
         }
@@ -177,71 +176,22 @@ function getDownloadUrl(version, assetName) {
 function getChecksumsUrl(version) {
     return `${GITHUB_RELEASES_BASE}/${version}/SHA256SUMS`;
 }
-/**
- * Parse SHA256SUMS file content and extract checksum for a specific asset
- * Format: <sha256>  <filename> (two spaces between hash and filename)
- * or: <sha256> <filename> (single space)
- */
-function parseChecksums(content, assetName) {
-    const lines = content.split('\n');
-    for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed)
-            continue;
-        // Match either "hash  filename" or "hash filename"
-        const match = trimmed.match(/^([a-f0-9]{64})\s+(.+)$/i);
-        if (match) {
-            const [, hash, filename] = match;
-            // Match exact filename or filename at end of path
-            if (filename === assetName || filename.endsWith(`/${assetName}`)) {
-                return hash.toLowerCase();
-            }
-        }
-    }
-    return null;
-}
-/**
- * Fetch checksum from SHA256SUMS file in the release
- */
-async function fetchChecksumFromRelease(version, assetName) {
+async function getExpectedChecksum(version, assetName) {
     const checksumsUrl = getChecksumsUrl(version);
     core.debug(`Fetching checksums from: ${checksumsUrl}`);
     try {
         const checksumsPath = await tc.downloadTool(checksumsUrl);
         const content = await fs.promises.readFile(checksumsPath, 'utf-8');
-        return parseChecksums(content, assetName);
+        const checksum = (0, checksums_1.parseChecksums)(content, assetName);
+        if (checksum) {
+            core.debug(`Fetched checksum for ${assetName}: ${checksum}`);
+        }
+        return checksum;
     }
     catch (error) {
         core.debug(`Failed to fetch SHA256SUMS: ${error instanceof Error ? error.message : error}`);
         return null;
     }
-}
-/**
- * Get expected checksum for an asset, trying multiple sources:
- * 1. Hardcoded checksums (for known versions)
- * 2. Dynamic fetch from SHA256SUMS in release (for new versions)
- */
-async function getExpectedChecksum(version, assetName) {
-    // First, try hardcoded checksums (fast, no network request)
-    const hardcodedChecksum = (0, checksums_1.getChecksum)(version, assetName);
-    if (hardcodedChecksum) {
-        core.debug(`Using hardcoded checksum for ${version}/${assetName}`);
-        return hardcodedChecksum;
-    }
-    // If version has hardcoded checksums but not for this asset, warn
-    if ((0, checksums_1.hasChecksums)(version)) {
-        core.warning(`No hardcoded checksum for asset '${assetName}' in version ${version}, fetching from release...`);
-    }
-    else {
-        core.info(`Version ${version} not in hardcoded checksums, fetching from release...`);
-    }
-    // Fetch from SHA256SUMS in the release
-    const fetchedChecksum = await fetchChecksumFromRelease(version, assetName);
-    if (fetchedChecksum) {
-        core.debug(`Fetched checksum from release: ${fetchedChecksum}`);
-        return fetchedChecksum;
-    }
-    return null;
 }
 async function verifyFileChecksum(filePath, expectedChecksum) {
     const fileBuffer = await fs.promises.readFile(filePath);
