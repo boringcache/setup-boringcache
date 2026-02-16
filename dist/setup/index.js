@@ -28583,6 +28583,7 @@ async function run() {
         core.setOutput('version', installedVersion);
         core.setOutput('path', binaryPath);
         core.setOutput('cache-hit', cacheHit.toString());
+        core.setOutput('asset', platform.assetName);
     }
     catch (error) {
         if (error instanceof Error) {

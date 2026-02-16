@@ -17,6 +17,15 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, ubuntu-24.04, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            expected-asset: boringcache-ubuntu-24.04-amd64
+          - os: ubuntu-24.04
+            expected-asset: boringcache-ubuntu-24.04-amd64
+          - os: macos-latest
+            expected-asset: boringcache-macos-15-arm64
+          - os: windows-latest
+            expected-asset: boringcache-windows-2022-amd64.exe
 
     steps:
       - uses: actions/checkout@v4
@@ -36,6 +45,16 @@ jobs:
           echo "Version: ${{ steps.setup.outputs.version }}"
           echo "Path: ${{ steps.setup.outputs.path }}"
           echo "Cache hit: ${{ steps.setup.outputs.cache-hit }}"
+          echo "Asset: ${{ steps.setup.outputs.asset }}"
+
+      - name: Verify asset detection
+        shell: bash
+        run: |
+          if [ "${{ steps.setup.outputs.asset }}" != "${{ matrix.expected-asset }}" ]; then
+            echo "Asset mismatch: expected '${{ matrix.expected-asset }}', got '${{ steps.setup.outputs.asset }}'"
+            exit 1
+          fi
+          echo "Asset correctly detected: ${{ steps.setup.outputs.asset }}"
 
       - name: Verify binary is executable
         shell: bash
@@ -132,6 +151,31 @@ jobs:
           skip-cache: true
 
       - name: Verify installation
+        run: boringcache --version
+
+  test-platform-override:
+    name: Test Platform Override
+    runs-on: ubuntu-24.04
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup BoringCache CLI with platform override
+        id: setup
+        uses: ./
+        with:
+          version: v1.0.0
+          platform: ubuntu-22.04-amd64
+
+      - name: Verify asset override
+        run: |
+          if [ "${{ steps.setup.outputs.asset }}" != "boringcache-ubuntu-22.04-amd64" ]; then
+            echo "Asset mismatch: expected 'boringcache-ubuntu-22.04-amd64', got '${{ steps.setup.outputs.asset }}'"
+            exit 1
+          fi
+          echo "Platform override correctly applied: ${{ steps.setup.outputs.asset }}"
+
+      - name: Verify binary works
         run: boringcache --version
 
   build:

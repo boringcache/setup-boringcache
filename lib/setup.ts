@@ -353,6 +353,7 @@ async function run(): Promise<void> {
     core.setOutput('version', installedVersion);
     core.setOutput('path', binaryPath);
     core.setOutput('cache-hit', cacheHit.toString());
+    core.setOutput('asset', platform.assetName);
   } catch (error) {
     if (error instanceof Error) {
       core.setFailed(error.message);
