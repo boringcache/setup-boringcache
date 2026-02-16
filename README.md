@@ -102,6 +102,7 @@ jobs:
 | `token` | No | - | API token to set as `BORINGCACHE_API_TOKEN`. |
 | `skip-cache` | No | `false` | Skip using the tool cache (always download fresh). |
 | `verify-checksum` | No | `true` | Verify SHA256 checksum of downloaded binary. |
+| `platform` | No | auto-detect | Override platform binary (e.g., `ubuntu-24.04-amd64`, `alpine-amd64`, `debian-bookworm-arm64`). |
 
 ## Outputs
 
@@ -110,16 +111,29 @@ jobs:
 | `version` | Installed BoringCache CLI version |
 | `path` | Path to the installed binary |
 | `cache-hit` | Whether the binary was restored from cache |
+| `asset` | The platform-specific asset name that was downloaded |
+
+### Platform override
+
+By default, the action auto-detects the runner's OS and architecture (Linux distro via `/etc/os-release`, macOS version via `sw_vers`). Use the `platform` input to force a specific binary:
+
+```yaml
+- uses: boringcache/setup-boringcache@v1
+  with:
+    platform: ubuntu-22.04-amd64
+```
 
 ## Platform behavior
 
 Supported platforms:
 
-| Platform | Architecture |
-|----------|--------------|
-| Linux | x64, arm64 |
-| macOS | arm64 |
-| Windows | x64 |
+| Platform | Architecture | Asset example |
+|----------|--------------|---------------|
+| Ubuntu | x64, arm64 | `boringcache-ubuntu-24.04-amd64` |
+| Debian | x64, arm64 | `boringcache-debian-bookworm-amd64` |
+| Alpine | x64, arm64 | `boringcache-alpine-amd64` |
+| macOS | arm64 | `boringcache-macos-15-arm64` |
+| Windows | x64 | `boringcache-windows-2022-amd64.exe` |
 
 ## Environment variables
 
