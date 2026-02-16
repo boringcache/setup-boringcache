@@ -17,7 +17,86 @@ interface PlatformInfo {
   isWindows: boolean;
 }
 
-function getPlatformInfo(): PlatformInfo {
+export interface LinuxDistro {
+  id: string;
+  versionId: string;
+  codename: string;
+}
+
+export function detectLinuxDistro(): LinuxDistro | null {
+  try {
+    const content = fs.readFileSync('/etc/os-release', 'utf-8');
+    const lines = content.split('\n');
+    const fields: Record<string, string> = {};
+    for (const line of lines) {
+      const match = line.match(/^(\w+)=(.*)$/);
+      if (match) {
+        // Strip surrounding quotes
+        fields[match[1]] = match[2].replace(/^["']|["']$/g, '');
+      }
+    }
+    return {
+      id: fields['ID'] || '',
+      versionId: fields['VERSION_ID'] || '',
+      codename: fields['VERSION_CODENAME'] || '',
+    };
+  } catch {
+    core.debug('Failed to read /etc/os-release');
+    return null;
+  }
+}
+
+export async function detectMacOSVersion(): Promise<string | null> {
+  try {
+    const { stdout } = await exec.getExecOutput('sw_vers', ['-productVersion'], { silent: true });
+    const output = stdout.trim();
+    const major = output.split('.')[0];
+    core.debug(`Detected macOS version: ${output} (major: ${major})`);
+    return major;
+  } catch {
+    core.debug('Failed to detect macOS version');
+    return null;
+  }
+}
+
+export function getLinuxAssetName(distro: LinuxDistro | null, arch: string): string {
+  if (!distro || !distro.id) {
+    return `boringcache-linux-${arch}`;
+  }
+
+  switch (distro.id) {
+    case 'ubuntu':
+      if (distro.versionId) {
+        return `boringcache-ubuntu-${distro.versionId}-${arch}`;
+      }
+      return `boringcache-linux-${arch}`;
+    case 'debian':
+      if (distro.codename) {
+        return `boringcache-debian-${distro.codename}-${arch}`;
+      }
+      return `boringcache-linux-${arch}`;
+    case 'alpine':
+      return `boringcache-alpine-${arch}`;
+    case 'arch':
+      return `boringcache-arch-${arch}`;
+    default:
+      return `boringcache-linux-${arch}`;
+  }
+}
+
+async function getPlatformInfo(): Promise<PlatformInfo> {
+  const platformOverride = core.getInput('platform');
+  if (platformOverride) {
+    core.info(`Using platform override: ${platformOverride}`);
+    const isWindows = platformOverride.includes('windows');
+    return {
+      os: isWindows ? 'windows' : platformOverride.includes('macos') ? 'macos' : 'linux',
+      arch: platformOverride.includes('arm64') ? 'arm64' : 'amd64',
+      assetName: `boringcache-${platformOverride}${isWindows && !platformOverride.endsWith('.exe') ? '.exe' : ''}`,
+      isWindows,
+    };
+  }
+
   const runnerOS = process.env.RUNNER_OS || os.platform();
   const runnerArch = process.env.RUNNER_ARCH || os.arch();
 
@@ -39,15 +118,27 @@ function getPlatformInfo(): PlatformInfo {
   }
 
   const isWindows = normalizedOS === 'Windows';
+  const arch = normalizedArch === 'ARM64' ? 'arm64' : 'amd64';
   let assetName: string;
 
   switch (normalizedOS) {
-    case 'Linux':
-      assetName = normalizedArch === 'ARM64' ? 'boringcache-linux-arm64' : 'boringcache-linux-amd64';
+    case 'Linux': {
+      const distro = detectLinuxDistro();
+      if (distro) {
+        core.info(`Detected Linux distro: ${distro.id} ${distro.versionId} (${distro.codename})`);
+      }
+      assetName = getLinuxAssetName(distro, arch);
       break;
-    case 'macOS':
-      assetName = 'boringcache-macos-14-arm64';
+    }
+    case 'macOS': {
+      const macVersion = await detectMacOSVersion();
+      if (macVersion && (macVersion === '15' || macVersion === '14')) {
+        assetName = `boringcache-macos-${macVersion}-arm64`;
+      } else {
+        assetName = 'boringcache-macos-14-arm64';
+      }
       break;
+    }
     case 'Windows':
       assetName = 'boringcache-windows-2022-amd64.exe';
       break;
@@ -222,7 +313,7 @@ async function run(): Promise<void> {
 
     core.info(`Setting up BoringCache CLI ${normalizedVersion}`);
 
-    const platform = getPlatformInfo();
+    const platform = await getPlatformInfo();
     core.info(`Platform: ${platform.os} ${platform.arch}`);
     core.info(`Asset: ${platform.assetName}`);
 

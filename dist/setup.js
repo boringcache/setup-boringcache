@@ -33,6 +33,9 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.detectLinuxDistro = detectLinuxDistro;
+exports.detectMacOSVersion = detectMacOSVersion;
+exports.getLinuxAssetName = getLinuxAssetName;
 const core = __importStar(require("@actions/core"));
 const exec = __importStar(require("@actions/exec"));
 const tc = __importStar(require("@actions/tool-cache"));
@@ -43,7 +46,77 @@ const path = __importStar(require("path"));
 const checksums_1 = require("./checksums");
 const TOOL_NAME = 'boringcache';
 const GITHUB_RELEASES_BASE = 'https://github.com/boringcache/cli/releases/download';
-function getPlatformInfo() {
+function detectLinuxDistro() {
+    try {
+        const content = fs.readFileSync('/etc/os-release', 'utf-8');
+        const lines = content.split('\n');
+        const fields = {};
+        for (const line of lines) {
+            const match = line.match(/^(\w+)=(.*)$/);
+            if (match) {
+                // Strip surrounding quotes
+                fields[match[1]] = match[2].replace(/^["']|["']$/g, '');
+            }
+        }
+        return {
+            id: fields['ID'] || '',
+            versionId: fields['VERSION_ID'] || '',
+            codename: fields['VERSION_CODENAME'] || '',
+        };
+    }
+    catch {
+        core.debug('Failed to read /etc/os-release');
+        return null;
+    }
+}
+async function detectMacOSVersion() {
+    try {
+        const { stdout } = await exec.getExecOutput('sw_vers', ['-productVersion'], { silent: true });
+        const output = stdout.trim();
+        const major = output.split('.')[0];
+        core.debug(`Detected macOS version: ${output} (major: ${major})`);
+        return major;
+    }
+    catch {
+        core.debug('Failed to detect macOS version');
+        return null;
+    }
+}
+function getLinuxAssetName(distro, arch) {
+    if (!distro || !distro.id) {
+        return `boringcache-linux-${arch}`;
+    }
+    switch (distro.id) {
+        case 'ubuntu':
+            if (distro.versionId) {
+                return `boringcache-ubuntu-${distro.versionId}-${arch}`;
+            }
+            return `boringcache-linux-${arch}`;
+        case 'debian':
+            if (distro.codename) {
+                return `boringcache-debian-${distro.codename}-${arch}`;
+            }
+            return `boringcache-linux-${arch}`;
+        case 'alpine':
+            return `boringcache-alpine-${arch}`;
+        case 'arch':
+            return `boringcache-arch-${arch}`;
+        default:
+            return `boringcache-linux-${arch}`;
+    }
+}
+async function getPlatformInfo() {
+    const platformOverride = core.getInput('platform');
+    if (platformOverride) {
+        core.info(`Using platform override: ${platformOverride}`);
+        const isWindows = platformOverride.includes('windows');
+        return {
+            os: isWindows ? 'windows' : platformOverride.includes('macos') ? 'macos' : 'linux',
+            arch: platformOverride.includes('arm64') ? 'arm64' : 'amd64',
+            assetName: `boringcache-${platformOverride}${isWindows && !platformOverride.endsWith('.exe') ? '.exe' : ''}`,
+            isWindows,
+        };
+    }
     const runnerOS = process.env.RUNNER_OS || os.platform();
     const runnerArch = process.env.RUNNER_ARCH || os.arch();
     let normalizedOS = runnerOS;
@@ -64,14 +137,27 @@ function getPlatformInfo() {
         normalizedArch = 'ARM64';
     }
     const isWindows = normalizedOS === 'Windows';
+    const arch = normalizedArch === 'ARM64' ? 'arm64' : 'amd64';
     let assetName;
     switch (normalizedOS) {
-        case 'Linux':
-            assetName = normalizedArch === 'ARM64' ? 'boringcache-linux-arm64' : 'boringcache-linux-amd64';
+        case 'Linux': {
+            const distro = detectLinuxDistro();
+            if (distro) {
+                core.info(`Detected Linux distro: ${distro.id} ${distro.versionId} (${distro.codename})`);
+            }
+            assetName = getLinuxAssetName(distro, arch);
             break;
-        case 'macOS':
-            assetName = 'boringcache-macos-14-arm64';
+        }
+        case 'macOS': {
+            const macVersion = await detectMacOSVersion();
+            if (macVersion && (macVersion === '15' || macVersion === '14')) {
+                assetName = `boringcache-macos-${macVersion}-arm64`;
+            }
+            else {
+                assetName = 'boringcache-macos-14-arm64';
+            }
             break;
+        }
         case 'Windows':
             assetName = 'boringcache-windows-2022-amd64.exe';
             break;
@@ -218,7 +304,7 @@ async function run() {
         const verifyChecksumEnabled = core.getInput('verify-checksum') !== 'false';
         const normalizedVersion = version.startsWith('v') ? version : `v${version}`;
         core.info(`Setting up BoringCache CLI ${normalizedVersion}`);
-        const platform = getPlatformInfo();
+        const platform = await getPlatformInfo();
         core.info(`Platform: ${platform.os} ${platform.arch}`);
         core.info(`Asset: ${platform.assetName}`);
         let toolPath;

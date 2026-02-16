@@ -17,6 +17,9 @@ inputs:
     description: 'Verify SHA256 checksum of downloaded binary (recommended)'
     required: false
     default: 'true'
+  platform:
+    description: 'Override platform binary (e.g., ubuntu-24.04-amd64, alpine-amd64, debian-bookworm-arm64). Auto-detected if not set.'
+    required: false
 outputs:
   version:
     description: 'The installed version of BoringCache CLI'
