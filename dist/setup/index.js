@@ -28489,7 +28489,24 @@ async function run() {
         let toolPath;
         let cacheHit = false;
         if (!skipCache) {
-            const cachedPath = tc.find(TOOL_NAME, normalizedVersion.replace(/^v/, ''));
+            let cachedPath = tc.find(TOOL_NAME, normalizedVersion.replace(/^v/, ''));
+            if (cachedPath && verifyChecksumEnabled) {
+                const binaryName = platform.isWindows ? 'boringcache.exe' : 'boringcache';
+                const cachedBinary = path.join(cachedPath, binaryName);
+                if (fs.existsSync(cachedBinary)) {
+                    const expectedChecksum = await getExpectedChecksum(normalizedVersion, platform.assetName);
+                    if (expectedChecksum) {
+                        const fileBuffer = await fs.promises.readFile(cachedBinary);
+                        const hash = crypto.createHash('sha256');
+                        hash.update(fileBuffer);
+                        const actualChecksum = hash.digest('hex');
+                        if (actualChecksum !== expectedChecksum) {
+                            core.warning('Cached CLI binary is stale (checksum mismatch), re-downloading');
+                            cachedPath = '';
+                        }
+                    }
+                }
+            }
             if (cachedPath) {
                 core.info(`Found cached BoringCache CLI at: ${cachedPath}`);
                 toolPath = cachedPath;
