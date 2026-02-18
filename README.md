@@ -43,7 +43,7 @@ Checksum verification is enabled by default. Checksums are embedded for known ve
 ```yaml
 - uses: boringcache/setup-boringcache@v1
   with:
-    version: v1.0.0
+    version: v1.0.1
 ```
 
 ### With API token
@@ -78,7 +78,7 @@ jobs:
 
       - uses: boringcache/setup-boringcache@v1
         with:
-          version: v1.0.0
+          version: v1.0.1
           token: ${{ secrets.BORINGCACHE_API_TOKEN }}
 
       - name: Restore cache
@@ -98,7 +98,7 @@ jobs:
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `version` | No | `v1.0.0` | Version of BoringCache CLI to install. |
+| `version` | No | `v1.0.1` | Version of BoringCache CLI to install. |
 | `token` | No | - | API token to set as `BORINGCACHE_API_TOKEN`. |
 | `skip-cache` | No | `false` | Skip using the tool cache (always download fresh). |
 | `verify-checksum` | No | `true` | Verify SHA256 checksum of downloaded binary. |

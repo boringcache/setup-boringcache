@@ -3,9 +3,9 @@ description: 'Cache once. Reuse everywhere. Install the BoringCache CLI with ver
 author: 'BoringCache'
 inputs:
   version:
-    description: 'BoringCache CLI version to install (e.g., v1.0.0)'
+    description: 'BoringCache CLI version to install (e.g., v1.0.1)'
     required: false
-    default: 'v1.0.0'
+    default: 'v1.0.1'
   token:
     description: 'BoringCache API token. If provided, sets BORINGCACHE_API_TOKEN environment variable.'
     required: false
