@@ -34,7 +34,7 @@ jobs:
         id: setup
         uses: ./
         with:
-          version: v1.0.2
+          version: v1.1.0
 
       - name: Verify installation
         run: boringcache --version
@@ -77,13 +77,13 @@ jobs:
         id: first
         uses: ./
         with:
-          version: v1.0.2
+          version: v1.1.0
 
       - name: Second setup (should be cache hit)
         id: second
         uses: ./
         with:
-          version: v1.0.2
+          version: v1.1.0
 
       - name: Verify cache was used
         shell: bash
@@ -106,7 +106,7 @@ jobs:
         id: setup
         uses: ./
         with:
-          version: v1.0.2
+          version: v1.1.0
           skip-cache: true
 
       - name: Verify installation
@@ -130,7 +130,7 @@ jobs:
       - name: Setup with checksum verification (default)
         uses: ./
         with:
-          version: v1.0.2
+          version: v1.1.0
           skip-cache: true
 
       - name: Verify installation
@@ -146,7 +146,7 @@ jobs:
       - name: Setup with checksum verification disabled
         uses: ./
         with:
-          version: v1.0.2
+          version: v1.1.0
           verify-checksum: false
           skip-cache: true
 
@@ -164,7 +164,7 @@ jobs:
         id: setup
         uses: ./
         with:
-          version: v1.0.2
+          version: v1.1.0
           platform: ubuntu-22.04-amd64
 
       - name: Verify asset override
