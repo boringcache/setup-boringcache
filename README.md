@@ -1,14 +1,6 @@
 # boringcache/setup-boringcache
 
-**Cache once. Reuse everywhere.**
-
-BoringCache is a universal build artifact cache for CI, Docker, and local development. It stores and restores directories you choose so build outputs, dependencies, and tool caches can be reused across environments.
-
-BoringCache does not run builds and is not tied to any build tool. It works with any language, framework, or workflow by caching directories explicitly selected by the user.
-
-Caches are content-addressed and verified before restore. If identical content already exists, uploads are skipped. The same cache can be reused in GitHub Actions, Docker/BuildKit, and on developer machines using the same CLI.
-
-This action installs the BoringCache CLI in GitHub Actions runners. It does not perform any caching by itself. Use this when you want to call `boringcache save` / `boringcache restore` directly instead of using the cache actions.
+Install the BoringCache CLI on GitHub Actions runners. Use this when you want to call `boringcache save` / `boringcache restore` directly instead of using the language-specific actions.
 
 ## Quick start
 
@@ -43,7 +35,7 @@ Checksum verification is enabled by default. Checksums are embedded for known ve
 ```yaml
 - uses: boringcache/setup-boringcache@v1
   with:
-    version: v1.0.2
+    version: v1.2.0
 ```
 
 ### With API token
@@ -78,7 +70,7 @@ jobs:
 
       - uses: boringcache/setup-boringcache@v1
         with:
-          version: v1.0.2
+          version: v1.2.0
           token: ${{ secrets.BORINGCACHE_API_TOKEN }}
 
       - name: Restore cache
@@ -98,7 +90,7 @@ jobs:
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `version` | No | `v1.0.2` | Version of BoringCache CLI to install. |
+| `version` | No | `v1.2.0` | Version of BoringCache CLI to install. |
 | `token` | No | - | API token to set as `BORINGCACHE_API_TOKEN`. |
 | `skip-cache` | No | `false` | Skip using the tool cache (always download fresh). |
 | `verify-checksum` | No | `true` | Verify SHA256 checksum of downloaded binary. |
