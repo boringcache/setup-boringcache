@@ -28477,7 +28477,7 @@ async function getInstalledVersion(binaryPath) {
 }
 async function run() {
     try {
-        const version = core.getInput('version') || 'v1.1.0';
+        const version = core.getInput('version') || 'v1.1.1';
         const token = core.getInput('token');
         const skipCache = core.getInput('skip-cache') === 'true';
         const verifyChecksumEnabled = core.getInput('verify-checksum') !== 'false';
