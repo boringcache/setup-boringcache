@@ -250,7 +250,7 @@ async function getInstalledVersion(binaryPath: string): Promise<string> {
 
 async function run(): Promise<void> {
   try {
-    const version = core.getInput('version') || 'v1.2.0';
+    const version = core.getInput('version') || 'v1.3.0';
     const token = core.getInput('token');
     const skipCache = core.getInput('skip-cache') === 'true';
     const verifyChecksumEnabled = core.getInput('verify-checksum') !== 'false';
