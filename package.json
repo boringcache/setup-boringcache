@@ -1,6 +1,6 @@
 {
   "name": "setup-boringcache",
-  "version": "1.3.3",
+  "version": "1.3.4",
   "description": "GitHub Action to install the BoringCache CLI with version pinning and checksum verification",
   "main": "dist/setup/index.js",
   "scripts": {
