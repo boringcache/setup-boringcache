@@ -200,4 +200,20 @@ describe('exportConfiguredTokens', () => {
     expect(exportVariableSpy).toHaveBeenCalledWith('BORINGCACHE_RESTORE_TOKEN', 'restore-token');
     expect(exportVariableSpy).toHaveBeenCalledWith('BORINGCACHE_SAVE_TOKEN', 'save-token');
   });
+
+  it('exports strict signature verification by default', () => {
+    const exportVariableSpy = jest.spyOn(require('@actions/core'), 'exportVariable').mockImplementation(() => {});
+
+    exportConfiguredTokens({}, { requireServerSignature: true });
+
+    expect(exportVariableSpy).toHaveBeenCalledWith('BORINGCACHE_REQUIRE_SERVER_SIGNATURE', '1');
+  });
+
+  it('allows strict signature verification to be disabled explicitly', () => {
+    const exportVariableSpy = jest.spyOn(require('@actions/core'), 'exportVariable').mockImplementation(() => {});
+
+    exportConfiguredTokens({}, { requireServerSignature: false });
+
+    expect(exportVariableSpy).toHaveBeenCalledWith('BORINGCACHE_REQUIRE_SERVER_SIGNATURE', '0');
+  });
 });

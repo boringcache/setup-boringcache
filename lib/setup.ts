@@ -254,7 +254,10 @@ async function getInstalledVersion(binaryPath: string): Promise<string> {
   }
 }
 
-export function exportConfiguredTokens(tokens: ConfiguredActionTokens): void {
+export function exportConfiguredTokens(
+  tokens: ConfiguredActionTokens,
+  options: { requireServerSignature?: boolean } = {}
+): void {
   const { token, restoreToken, saveToken } = tokens;
   const secrets = new Set(
     [token, restoreToken, saveToken].filter((value): value is string => Boolean(value))
@@ -278,6 +281,12 @@ export function exportConfiguredTokens(tokens: ConfiguredActionTokens): void {
     core.exportVariable('BORINGCACHE_SAVE_TOKEN', saveToken);
     core.info('BORINGCACHE_SAVE_TOKEN environment variable set');
   }
+
+  if (typeof options.requireServerSignature === 'boolean') {
+    const value = options.requireServerSignature ? '1' : '0';
+    core.exportVariable('BORINGCACHE_REQUIRE_SERVER_SIGNATURE', value);
+    core.info(`BORINGCACHE_REQUIRE_SERVER_SIGNATURE=${value}`);
+  }
 }
 
 async function run(): Promise<void> {
@@ -286,6 +295,7 @@ async function run(): Promise<void> {
     const token = core.getInput('token');
     const restoreToken = core.getInput('restore-token');
     const saveToken = core.getInput('save-token');
+    const requireServerSignature = core.getBooleanInput('require-server-signature');
     const skipCache = core.getInput('skip-cache') === 'true';
     const verifyChecksumEnabled = core.getInput('verify-checksum') !== 'false';
 
@@ -341,7 +351,10 @@ async function run(): Promise<void> {
       );
     }
 
-    exportConfiguredTokens({ token, restoreToken, saveToken });
+    exportConfiguredTokens(
+      { token, restoreToken, saveToken },
+      { requireServerSignature }
+    );
 
     const binaryName = platform.isWindows ? 'boringcache.exe' : 'boringcache';
     const binaryPath = path.join(toolPath, binaryName);

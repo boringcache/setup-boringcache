@@ -15,6 +15,10 @@ inputs:
   save-token:
     description: 'Save-capable token. Sets BORINGCACHE_SAVE_TOKEN.'
     required: false
+  require-server-signature:
+    description: 'Export BORINGCACHE_REQUIRE_SERVER_SIGNATURE for downstream CLI commands. Default: true.'
+    required: false
+    default: 'true'
   skip-cache:
     description: 'Skip using the tool cache (always download fresh binary)'
     required: false

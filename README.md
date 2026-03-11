@@ -21,6 +21,7 @@ Use this when you want to call `boringcache` directly instead of using a higher-
 - Verifies checksums by default.
 - Reuses the runner tool cache when available.
 - Exposes `BORINGCACHE_RESTORE_TOKEN` and `BORINGCACHE_SAVE_TOKEN` when you pass them as inputs.
+- Enables strict server signature verification by default for downstream `boringcache` commands.
 
 ## Key inputs
 
@@ -30,6 +31,7 @@ Use this when you want to call `boringcache` directly instead of using a higher-
 | `restore-token` | Restore-capable token for read-only or mixed workflows. |
 | `save-token` | Save-capable token for trusted jobs that should publish cache updates. |
 | `token` | Legacy compatibility token. Prefer split tokens for new workflows. |
+| `require-server-signature` | Export `BORINGCACHE_REQUIRE_SERVER_SIGNATURE`. Default: `true`. |
 | `verify-checksum` | Verify the downloaded binary checksum. Default: `true`. |
 | `platform` | Override the detected platform asset. |
 

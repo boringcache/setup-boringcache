@@ -28476,7 +28476,7 @@ async function getInstalledVersion(binaryPath) {
         return 'unknown';
     }
 }
-function exportConfiguredTokens(tokens) {
+function exportConfiguredTokens(tokens, options = {}) {
     const { token, restoreToken, saveToken } = tokens;
     const secrets = new Set([token, restoreToken, saveToken].filter((value) => Boolean(value)));
     for (const secret of secrets) {
@@ -28494,6 +28494,11 @@ function exportConfiguredTokens(tokens) {
         core.exportVariable('BORINGCACHE_SAVE_TOKEN', saveToken);
         core.info('BORINGCACHE_SAVE_TOKEN environment variable set');
     }
+    if (typeof options.requireServerSignature === 'boolean') {
+        const value = options.requireServerSignature ? '1' : '0';
+        core.exportVariable('BORINGCACHE_REQUIRE_SERVER_SIGNATURE', value);
+        core.info(`BORINGCACHE_REQUIRE_SERVER_SIGNATURE=${value}`);
+    }
 }
 async function run() {
     try {
@@ -28501,6 +28506,7 @@ async function run() {
         const token = core.getInput('token');
         const restoreToken = core.getInput('restore-token');
         const saveToken = core.getInput('save-token');
+        const requireServerSignature = core.getBooleanInput('require-server-signature');
         const skipCache = core.getInput('skip-cache') === 'true';
         const verifyChecksumEnabled = core.getInput('verify-checksum') !== 'false';
         const normalizedVersion = version.startsWith('v') ? version : `v${version}`;
@@ -28548,7 +28554,7 @@ async function run() {
         if (token && !restoreToken && !saveToken) {
             core.notice('The "token" input is a legacy compatibility path. Prefer "restore-token" and "save-token" for new workflows.');
         }
-        exportConfiguredTokens({ token, restoreToken, saveToken });
+        exportConfiguredTokens({ token, restoreToken, saveToken }, { requireServerSignature });
         const binaryName = platform.isWindows ? 'boringcache.exe' : 'boringcache';
         const binaryPath = path.join(toolPath, binaryName);
         const installedVersion = await getInstalledVersion(binaryPath);
