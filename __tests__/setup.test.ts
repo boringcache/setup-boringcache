@@ -1,4 +1,4 @@
-import { getLinuxAssetName, LinuxDistro } from '../lib/setup';
+import { exportConfiguredTokens, getLinuxAssetName, LinuxDistro } from '../lib/setup';
 
 describe('getLinuxAssetName', () => {
   it('returns ubuntu asset for ubuntu distro with version', () => {
@@ -166,5 +166,38 @@ describe('detectMacOSVersion', () => {
   it('returns null on failure', async () => {
     setupMock(new Error('command not found'));
     expect(await detectMacOSVersion()).toBeNull();
+  });
+});
+
+describe('exportConfiguredTokens', () => {
+  beforeEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('exports the legacy token env when token is provided', () => {
+    const setSecretSpy = jest.spyOn(require('@actions/core'), 'setSecret').mockImplementation(() => {});
+    const exportVariableSpy = jest.spyOn(require('@actions/core'), 'exportVariable').mockImplementation(() => {});
+    const infoSpy = jest.spyOn(require('@actions/core'), 'info').mockImplementation(() => {});
+
+    exportConfiguredTokens({ token: 'legacy-token' });
+
+    expect(setSecretSpy).toHaveBeenCalledWith('legacy-token');
+    expect(exportVariableSpy).toHaveBeenCalledWith('BORINGCACHE_API_TOKEN', 'legacy-token');
+    expect(infoSpy).toHaveBeenCalledWith('BORINGCACHE_API_TOKEN environment variable set');
+  });
+
+  it('exports restore and save token envs independently', () => {
+    const setSecretSpy = jest.spyOn(require('@actions/core'), 'setSecret').mockImplementation(() => {});
+    const exportVariableSpy = jest.spyOn(require('@actions/core'), 'exportVariable').mockImplementation(() => {});
+
+    exportConfiguredTokens({
+      restoreToken: 'restore-token',
+      saveToken: 'save-token',
+    });
+
+    expect(setSecretSpy).toHaveBeenCalledWith('restore-token');
+    expect(setSecretSpy).toHaveBeenCalledWith('save-token');
+    expect(exportVariableSpy).toHaveBeenCalledWith('BORINGCACHE_RESTORE_TOKEN', 'restore-token');
+    expect(exportVariableSpy).toHaveBeenCalledWith('BORINGCACHE_SAVE_TOKEN', 'save-token');
   });
 });

@@ -28265,6 +28265,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.detectLinuxDistro = detectLinuxDistro;
 exports.detectMacOSVersion = detectMacOSVersion;
 exports.getLinuxAssetName = getLinuxAssetName;
+exports.exportConfiguredTokens = exportConfiguredTokens;
 const core = __importStar(__nccwpck_require__(7484));
 const exec = __importStar(__nccwpck_require__(5236));
 const tc = __importStar(__nccwpck_require__(3472));
@@ -28475,10 +28476,31 @@ async function getInstalledVersion(binaryPath) {
         return 'unknown';
     }
 }
+function exportConfiguredTokens(tokens) {
+    const { token, restoreToken, saveToken } = tokens;
+    const secrets = new Set([token, restoreToken, saveToken].filter((value) => Boolean(value)));
+    for (const secret of secrets) {
+        core.setSecret(secret);
+    }
+    if (token) {
+        core.exportVariable('BORINGCACHE_API_TOKEN', token);
+        core.info('BORINGCACHE_API_TOKEN environment variable set');
+    }
+    if (restoreToken) {
+        core.exportVariable('BORINGCACHE_RESTORE_TOKEN', restoreToken);
+        core.info('BORINGCACHE_RESTORE_TOKEN environment variable set');
+    }
+    if (saveToken) {
+        core.exportVariable('BORINGCACHE_SAVE_TOKEN', saveToken);
+        core.info('BORINGCACHE_SAVE_TOKEN environment variable set');
+    }
+}
 async function run() {
     try {
         const version = core.getInput('version');
         const token = core.getInput('token');
+        const restoreToken = core.getInput('restore-token');
+        const saveToken = core.getInput('save-token');
         const skipCache = core.getInput('skip-cache') === 'true';
         const verifyChecksumEnabled = core.getInput('verify-checksum') !== 'false';
         const normalizedVersion = version.startsWith('v') ? version : `v${version}`;
@@ -28523,11 +28545,10 @@ async function run() {
         }
         core.addPath(toolPath);
         core.info(`Added ${toolPath} to PATH`);
-        if (token) {
-            core.setSecret(token);
-            core.exportVariable('BORINGCACHE_API_TOKEN', token);
-            core.info('BORINGCACHE_API_TOKEN environment variable set');
+        if (token && !restoreToken && !saveToken) {
+            core.notice('The "token" input is a legacy compatibility path. Prefer "restore-token" and "save-token" for new workflows.');
         }
+        exportConfiguredTokens({ token, restoreToken, saveToken });
         const binaryName = platform.isWindows ? 'boringcache.exe' : 'boringcache';
         const binaryPath = path.join(toolPath, binaryName);
         const installedVersion = await getInstalledVersion(binaryPath);
@@ -28546,7 +28567,9 @@ async function run() {
         }
     }
 }
-run();
+if (require.main === require.cache[eval('__filename')]) {
+    run();
+}
 
 
 /***/ }),

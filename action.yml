@@ -7,7 +7,13 @@ inputs:
     required: false
     default: 'v1.12.1'
   token:
-    description: 'BoringCache API token. If provided, sets BORINGCACHE_API_TOKEN environment variable.'
+    description: 'Legacy compatibility token. Prefer restore-token and save-token for new workflows.'
+    required: false
+  restore-token:
+    description: 'Restore-only or restore-capable token. Sets BORINGCACHE_RESTORE_TOKEN.'
+    required: false
+  save-token:
+    description: 'Save-capable token. Sets BORINGCACHE_SAVE_TOKEN.'
     required: false
   skip-cache:
     description: 'Skip using the tool cache (always download fresh binary)'

@@ -35,18 +35,29 @@ Checksum verification is enabled by default. Checksums are embedded for known ve
 ```yaml
 - uses: boringcache/setup-boringcache@v1
   with:
-    version: v1.7.2
+    version: v1.12.1
 ```
 
-### With API token
+### With a save token
 
 ```yaml
 - uses: boringcache/setup-boringcache@v1
   with:
-    token: ${{ secrets.BORINGCACHE_API_TOKEN }}
+    save-token: ${{ secrets.BORINGCACHE_SAVE_TOKEN }}
 
 - run: boringcache restore my-org/my-project "deps:node_modules"
 ```
+
+### With split CI tokens
+
+```yaml
+- uses: boringcache/setup-boringcache@v1
+  with:
+    restore-token: ${{ secrets.BORINGCACHE_RESTORE_TOKEN }}
+    save-token: ${{ github.event_name == 'pull_request' && '' || secrets.BORINGCACHE_SAVE_TOKEN }}
+```
+
+This is the recommended pattern for new workflows. Pull requests restore with `BORINGCACHE_RESTORE_TOKEN`; trusted branch and tag jobs also get `BORINGCACHE_SAVE_TOKEN` for writes.
 
 ### Disable checksum verification (not recommended)
 
@@ -70,8 +81,9 @@ jobs:
 
       - uses: boringcache/setup-boringcache@v1
         with:
-          version: v1.7.2
-          token: ${{ secrets.BORINGCACHE_API_TOKEN }}
+          version: v1.12.1
+          restore-token: ${{ secrets.BORINGCACHE_RESTORE_TOKEN }}
+          save-token: ${{ github.event_name == 'pull_request' && '' || secrets.BORINGCACHE_SAVE_TOKEN }}
 
       - name: Restore cache
         run: boringcache restore my-org/my-project "node-deps:node_modules"
@@ -90,8 +102,10 @@ jobs:
 
 | Input | Required | Default | Description |
 |-------|----------|---------|-------------|
-| `version` | No | `v1.7.2` | Version of BoringCache CLI to install. |
-| `token` | No | - | API token to set as `BORINGCACHE_API_TOKEN`. |
+| `version` | No | `v1.12.1` | Version of BoringCache CLI to install. |
+| `restore-token` | No | - | Restore-capable token to set as `BORINGCACHE_RESTORE_TOKEN`. |
+| `save-token` | No | - | Save-capable token to set as `BORINGCACHE_SAVE_TOKEN`. |
+| `token` | No | - | Legacy compatibility token to set as `BORINGCACHE_API_TOKEN`. Prefer split tokens for new workflows. |
 | `skip-cache` | No | `false` | Skip using the tool cache (always download fresh). |
 | `verify-checksum` | No | `true` | Verify SHA256 checksum of downloaded binary. |
 | `platform` | No | auto-detect | Override platform binary (e.g., `ubuntu-24.04-amd64`, `alpine-amd64`, `debian-bookworm-arm64`). |
@@ -131,7 +145,15 @@ Supported platforms:
 
 | Variable | Description |
 |----------|-------------|
-| `BORINGCACHE_API_TOKEN` | API token for authentication (set when `token` input is provided) |
+| `BORINGCACHE_RESTORE_TOKEN` | Restore-capable token for restore/read commands |
+| `BORINGCACHE_SAVE_TOKEN` | Save-capable token for save/write commands |
+| `BORINGCACHE_API_TOKEN` | Legacy compatibility token exported when `token` is provided |
+
+## Recommended auth model
+
+- Use `restore-token` for untrusted PR jobs.
+- Use `save-token` for trusted branch/tag jobs.
+- Keep `token` only for compatibility with older workflows; avoid it in new integrations.
 
 ## Troubleshooting
 

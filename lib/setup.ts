@@ -23,6 +23,12 @@ export interface LinuxDistro {
   codename: string;
 }
 
+export interface ConfiguredActionTokens {
+  token?: string;
+  restoreToken?: string;
+  saveToken?: string;
+}
+
 export function detectLinuxDistro(): LinuxDistro | null {
   try {
     const content = fs.readFileSync('/etc/os-release', 'utf-8');
@@ -248,10 +254,38 @@ async function getInstalledVersion(binaryPath: string): Promise<string> {
   }
 }
 
+export function exportConfiguredTokens(tokens: ConfiguredActionTokens): void {
+  const { token, restoreToken, saveToken } = tokens;
+  const secrets = new Set(
+    [token, restoreToken, saveToken].filter((value): value is string => Boolean(value))
+  );
+
+  for (const secret of secrets) {
+    core.setSecret(secret);
+  }
+
+  if (token) {
+    core.exportVariable('BORINGCACHE_API_TOKEN', token);
+    core.info('BORINGCACHE_API_TOKEN environment variable set');
+  }
+
+  if (restoreToken) {
+    core.exportVariable('BORINGCACHE_RESTORE_TOKEN', restoreToken);
+    core.info('BORINGCACHE_RESTORE_TOKEN environment variable set');
+  }
+
+  if (saveToken) {
+    core.exportVariable('BORINGCACHE_SAVE_TOKEN', saveToken);
+    core.info('BORINGCACHE_SAVE_TOKEN environment variable set');
+  }
+}
+
 async function run(): Promise<void> {
   try {
     const version = core.getInput('version');
     const token = core.getInput('token');
+    const restoreToken = core.getInput('restore-token');
+    const saveToken = core.getInput('save-token');
     const skipCache = core.getInput('skip-cache') === 'true';
     const verifyChecksumEnabled = core.getInput('verify-checksum') !== 'false';
 
@@ -301,11 +335,13 @@ async function run(): Promise<void> {
     core.addPath(toolPath);
     core.info(`Added ${toolPath} to PATH`);
 
-    if (token) {
-      core.setSecret(token);
-      core.exportVariable('BORINGCACHE_API_TOKEN', token);
-      core.info('BORINGCACHE_API_TOKEN environment variable set');
+    if (token && !restoreToken && !saveToken) {
+      core.notice(
+        'The "token" input is a legacy compatibility path. Prefer "restore-token" and "save-token" for new workflows.'
+      );
     }
+
+    exportConfiguredTokens({ token, restoreToken, saveToken });
 
     const binaryName = platform.isWindows ? 'boringcache.exe' : 'boringcache';
     const binaryPath = path.join(toolPath, binaryName);
@@ -326,4 +362,6 @@ async function run(): Promise<void> {
   }
 }
 
-run();
+if (require.main === module) {
+  run();
+}
