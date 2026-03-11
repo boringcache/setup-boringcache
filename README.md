@@ -1,8 +1,10 @@
 # boringcache/setup-boringcache
 
-Install the BoringCache CLI on GitHub Actions runners.
+Install the BoringCache CLI on a GitHub Actions runner.
 
-Use this when you want to call `boringcache` directly instead of using a higher-level BoringCache action.
+## When to use it
+
+Start here when you want to call `boringcache` yourself or you need a workflow the higher-level actions do not cover.
 
 ## Quick start
 
@@ -15,7 +17,14 @@ Use this when you want to call `boringcache` directly instead of using a higher-
 - run: boringcache --version
 ```
 
-## What it does
+## Trust model
+
+- Pass `restore-token` to every job that should read cache.
+- Pass `save-token` only to trusted jobs that should publish cache updates.
+- `token` is legacy compatibility only for older workflows.
+- `require-server-signature` defaults to `true` so downstream CLI commands verify publication signatures by default.
+
+## What it handles
 
 - Installs a pinned BoringCache CLI version and adds it to `PATH`.
 - Verifies checksums by default.
@@ -44,7 +53,7 @@ Use this when you want to call `boringcache` directly instead of using a higher-
 | `cache-hit` | Whether the binary came from the tool cache. |
 | `asset` | Platform-specific asset that was installed. |
 
-## Docs
+## Learn more
 
 - [GitHub Actions docs](https://boringcache.com/docs#setup-boringcache)
 - [GitHub Actions auth and trust model](https://boringcache.com/docs#actions-auth)
