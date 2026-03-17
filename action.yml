@@ -1,5 +1,5 @@
 name: 'Setup BoringCache'
-description: 'Cache once. Reuse everywhere. Install the BoringCache CLI with version pinning and checksum verification.'
+description: 'Deprecated legacy action. Use boringcache/one@v1 with setup: none or setup: external for CLI bootstrap.'
 author: 'BoringCache'
 inputs:
   version:

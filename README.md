@@ -1,5 +1,9 @@
 # boringcache/setup-boringcache
 
+> Deprecated legacy action. New workflows should use `boringcache/one@v1` instead.
+>
+> Replacement: use `boringcache/one@v1` with `setup: none` or `setup: external` when you only need CLI bootstrap. This repo is retained only for deprecation and retirement prep.
+
 Install the BoringCache CLI on a GitHub Actions runner.
 
 ## When to use it
