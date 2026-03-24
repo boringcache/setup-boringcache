@@ -14,6 +14,7 @@ interface PlatformInfo {
   os: string;
   arch: string;
   assetName: string;
+  fallbackAssetName?: string;
   isWindows: boolean;
 }
 
@@ -65,28 +66,17 @@ export async function detectMacOSVersion(): Promise<string | null> {
 }
 
 export function getLinuxAssetName(distro: LinuxDistro | null, arch: string): string {
-  if (!distro || !distro.id) {
-    return `boringcache-linux-${arch}`;
+  if (distro?.id === 'alpine') {
+    return `boringcache-linux-musl-${arch}`;
   }
+  return `boringcache-linux-${arch}`;
+}
 
-  switch (distro.id) {
-    case 'ubuntu':
-      if (distro.versionId) {
-        return `boringcache-ubuntu-${distro.versionId}-${arch}`;
-      }
-      return `boringcache-linux-${arch}`;
-    case 'debian':
-      if (distro.codename) {
-        return `boringcache-debian-${distro.codename}-${arch}`;
-      }
-      return `boringcache-linux-${arch}`;
-    case 'alpine':
-      return `boringcache-alpine-${arch}`;
-    case 'arch':
-      return `boringcache-arch-${arch}`;
-    default:
-      return `boringcache-linux-${arch}`;
+export function getLinuxFallbackAssetName(distro: LinuxDistro | null, arch: string): string | undefined {
+  if (distro?.id === 'alpine') {
+    return `boringcache-alpine-${arch}`;
   }
+  return undefined;
 }
 
 async function getPlatformInfo(): Promise<PlatformInfo> {
@@ -125,6 +115,7 @@ async function getPlatformInfo(): Promise<PlatformInfo> {
   const isWindows = normalizedOS === 'Windows';
   const arch = normalizedArch === 'ARM64' ? 'arm64' : 'amd64';
   let assetName: string;
+  let fallbackAssetName: string | undefined;
 
   switch (normalizedOS) {
     case 'Linux': {
@@ -133,6 +124,7 @@ async function getPlatformInfo(): Promise<PlatformInfo> {
         core.info(`Detected Linux distro: ${distro.id} ${distro.versionId} (${distro.codename})`);
       }
       assetName = getLinuxAssetName(distro, arch);
+      fallbackAssetName = getLinuxFallbackAssetName(distro, arch);
       break;
     }
     case 'macOS': {
@@ -155,6 +147,7 @@ async function getPlatformInfo(): Promise<PlatformInfo> {
     os: normalizedOS.toLowerCase(),
     arch: normalizedArch.toLowerCase(),
     assetName,
+    fallbackAssetName,
     isWindows,
   };
 }
@@ -205,18 +198,32 @@ async function downloadAndInstall(
   platform: PlatformInfo,
   verifyChecksumEnabled: boolean
 ): Promise<string> {
-  const downloadUrl = getDownloadUrl(version, platform.assetName);
-  core.info(`Downloading BoringCache CLI from: ${downloadUrl}`);
+  let assetName = platform.assetName;
+  let downloadedPath: string;
 
-  const downloadedPath = await tc.downloadTool(downloadUrl);
+  try {
+    const downloadUrl = getDownloadUrl(version, assetName);
+    core.info(`Downloading BoringCache CLI from: ${downloadUrl}`);
+    downloadedPath = await tc.downloadTool(downloadUrl);
+  } catch (error) {
+    if (platform.fallbackAssetName) {
+      const msg = error instanceof Error ? error.message : String(error);
+      core.info(`Primary asset ${assetName} not available (${msg}), trying fallback: ${platform.fallbackAssetName}`);
+      assetName = platform.fallbackAssetName;
+      const fallbackUrl = getDownloadUrl(version, assetName);
+      downloadedPath = await tc.downloadTool(fallbackUrl);
+    } else {
+      throw error;
+    }
+  }
 
   if (verifyChecksumEnabled) {
-    const expectedChecksum = await getExpectedChecksum(version, platform.assetName);
+    const expectedChecksum = await getExpectedChecksum(version, assetName);
     if (expectedChecksum) {
       core.info('Verifying checksum...');
       await verifyFileChecksum(downloadedPath, expectedChecksum);
     } else {
-      core.warning(`No checksum available for ${version}/${platform.assetName} - skipping verification`);
+      core.warning(`No checksum available for ${version}/${assetName} - skipping verification`);
     }
   }
 

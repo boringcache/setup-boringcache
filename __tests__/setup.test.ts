@@ -1,63 +1,59 @@
-import { exportConfiguredTokens, getLinuxAssetName, LinuxDistro } from '../lib/setup';
+import { exportConfiguredTokens, getLinuxAssetName, getLinuxFallbackAssetName, LinuxDistro } from '../lib/setup';
 
 describe('getLinuxAssetName', () => {
-  it('returns ubuntu asset for ubuntu distro with version', () => {
-    const distro: LinuxDistro = { id: 'ubuntu', versionId: '24.04', codename: 'noble' };
-    expect(getLinuxAssetName(distro, 'amd64')).toBe('boringcache-ubuntu-24.04-amd64');
-  });
-
-  it('returns ubuntu 22.04 asset', () => {
-    const distro: LinuxDistro = { id: 'ubuntu', versionId: '22.04', codename: 'jammy' };
-    expect(getLinuxAssetName(distro, 'arm64')).toBe('boringcache-ubuntu-22.04-arm64');
-  });
-
-  it('returns ubuntu 25.04 asset', () => {
-    const distro: LinuxDistro = { id: 'ubuntu', versionId: '25.04', codename: 'plucky' };
-    expect(getLinuxAssetName(distro, 'amd64')).toBe('boringcache-ubuntu-25.04-amd64');
-  });
-
-  it('falls back to linux for ubuntu without version', () => {
-    const distro: LinuxDistro = { id: 'ubuntu', versionId: '', codename: '' };
-    expect(getLinuxAssetName(distro, 'amd64')).toBe('boringcache-linux-amd64');
-  });
-
-  it('returns debian bookworm asset', () => {
-    const distro: LinuxDistro = { id: 'debian', versionId: '12', codename: 'bookworm' };
-    expect(getLinuxAssetName(distro, 'amd64')).toBe('boringcache-debian-bookworm-amd64');
-  });
-
-  it('returns debian bullseye asset', () => {
-    const distro: LinuxDistro = { id: 'debian', versionId: '11', codename: 'bullseye' };
-    expect(getLinuxAssetName(distro, 'arm64')).toBe('boringcache-debian-bullseye-arm64');
-  });
-
-  it('falls back to linux for debian without codename', () => {
-    const distro: LinuxDistro = { id: 'debian', versionId: '12', codename: '' };
-    expect(getLinuxAssetName(distro, 'amd64')).toBe('boringcache-linux-amd64');
-  });
-
-  it('returns alpine asset', () => {
+  it('returns musl asset for alpine', () => {
     const distro: LinuxDistro = { id: 'alpine', versionId: '3.19', codename: '' };
-    expect(getLinuxAssetName(distro, 'amd64')).toBe('boringcache-alpine-amd64');
+    expect(getLinuxAssetName(distro, 'amd64')).toBe('boringcache-linux-musl-amd64');
   });
 
-  it('returns arch asset', () => {
-    const distro: LinuxDistro = { id: 'arch', versionId: '', codename: '' };
-    expect(getLinuxAssetName(distro, 'arm64')).toBe('boringcache-arch-arm64');
+  it('returns musl asset for alpine arm64', () => {
+    const distro: LinuxDistro = { id: 'alpine', versionId: '3.21', codename: '' };
+    expect(getLinuxAssetName(distro, 'arm64')).toBe('boringcache-linux-musl-arm64');
   });
 
-  it('falls back to generic linux for unknown distro', () => {
+  it('returns generic linux for ubuntu', () => {
+    const distro: LinuxDistro = { id: 'ubuntu', versionId: '24.04', codename: 'noble' };
+    expect(getLinuxAssetName(distro, 'amd64')).toBe('boringcache-linux-amd64');
+  });
+
+  it('returns generic linux for debian', () => {
+    const distro: LinuxDistro = { id: 'debian', versionId: '12', codename: 'bookworm' };
+    expect(getLinuxAssetName(distro, 'arm64')).toBe('boringcache-linux-arm64');
+  });
+
+  it('returns generic linux for unknown distro', () => {
     const distro: LinuxDistro = { id: 'fedora', versionId: '39', codename: '' };
     expect(getLinuxAssetName(distro, 'amd64')).toBe('boringcache-linux-amd64');
   });
 
-  it('falls back to generic linux when distro is null', () => {
+  it('returns generic linux when distro is null', () => {
     expect(getLinuxAssetName(null, 'amd64')).toBe('boringcache-linux-amd64');
   });
 
-  it('falls back to generic linux when distro id is empty', () => {
+  it('returns generic linux when distro id is empty', () => {
     const distro: LinuxDistro = { id: '', versionId: '', codename: '' };
     expect(getLinuxAssetName(distro, 'arm64')).toBe('boringcache-linux-arm64');
+  });
+});
+
+describe('getLinuxFallbackAssetName', () => {
+  it('returns alpine fallback for alpine distro', () => {
+    const distro: LinuxDistro = { id: 'alpine', versionId: '3.19', codename: '' };
+    expect(getLinuxFallbackAssetName(distro, 'amd64')).toBe('boringcache-alpine-amd64');
+  });
+
+  it('returns alpine arm64 fallback', () => {
+    const distro: LinuxDistro = { id: 'alpine', versionId: '3.21', codename: '' };
+    expect(getLinuxFallbackAssetName(distro, 'arm64')).toBe('boringcache-alpine-arm64');
+  });
+
+  it('returns undefined for non-alpine distros', () => {
+    const distro: LinuxDistro = { id: 'ubuntu', versionId: '24.04', codename: 'noble' };
+    expect(getLinuxFallbackAssetName(distro, 'amd64')).toBeUndefined();
+  });
+
+  it('returns undefined when distro is null', () => {
+    expect(getLinuxFallbackAssetName(null, 'amd64')).toBeUndefined();
   });
 });
 

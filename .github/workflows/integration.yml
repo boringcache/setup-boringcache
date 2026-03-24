@@ -19,9 +19,9 @@ jobs:
         os: [ubuntu-latest, ubuntu-24.04, macos-latest, windows-latest]
         include:
           - os: ubuntu-latest
-            expected-asset: boringcache-ubuntu-24.04-amd64
+            expected-asset: boringcache-linux-amd64
           - os: ubuntu-24.04
-            expected-asset: boringcache-ubuntu-24.04-amd64
+            expected-asset: boringcache-linux-amd64
           - os: macos-latest
             expected-asset: boringcache-macos-15-arm64
           - os: windows-latest
@@ -165,12 +165,12 @@ jobs:
         uses: ./
         with:
           version: v1.1.0
-          platform: ubuntu-22.04-amd64
+          platform: linux-musl-amd64
 
       - name: Verify asset override
         run: |
-          if [ "${{ steps.setup.outputs.asset }}" != "boringcache-ubuntu-22.04-amd64" ]; then
-            echo "Asset mismatch: expected 'boringcache-ubuntu-22.04-amd64', got '${{ steps.setup.outputs.asset }}'"
+          if [ "${{ steps.setup.outputs.asset }}" != "boringcache-linux-musl-amd64" ]; then
+            echo "Asset mismatch: expected 'boringcache-linux-musl-amd64', got '${{ steps.setup.outputs.asset }}'"
             exit 1
           fi
           echo "Platform override correctly applied: ${{ steps.setup.outputs.asset }}"

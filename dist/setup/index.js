@@ -28265,6 +28265,7 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.detectLinuxDistro = detectLinuxDistro;
 exports.detectMacOSVersion = detectMacOSVersion;
 exports.getLinuxAssetName = getLinuxAssetName;
+exports.getLinuxFallbackAssetName = getLinuxFallbackAssetName;
 exports.exportConfiguredTokens = exportConfiguredTokens;
 const core = __importStar(__nccwpck_require__(7484));
 const exec = __importStar(__nccwpck_require__(5236));
@@ -28312,27 +28313,16 @@ async function detectMacOSVersion() {
     }
 }
 function getLinuxAssetName(distro, arch) {
-    if (!distro || !distro.id) {
-        return `boringcache-linux-${arch}`;
+    if ((distro === null || distro === void 0 ? void 0 : distro.id) === 'alpine') {
+        return `boringcache-linux-musl-${arch}`;
     }
-    switch (distro.id) {
-        case 'ubuntu':
-            if (distro.versionId) {
-                return `boringcache-ubuntu-${distro.versionId}-${arch}`;
-            }
-            return `boringcache-linux-${arch}`;
-        case 'debian':
-            if (distro.codename) {
-                return `boringcache-debian-${distro.codename}-${arch}`;
-            }
-            return `boringcache-linux-${arch}`;
-        case 'alpine':
-            return `boringcache-alpine-${arch}`;
-        case 'arch':
-            return `boringcache-arch-${arch}`;
-        default:
-            return `boringcache-linux-${arch}`;
+    return `boringcache-linux-${arch}`;
+}
+function getLinuxFallbackAssetName(distro, arch) {
+    if ((distro === null || distro === void 0 ? void 0 : distro.id) === 'alpine') {
+        return `boringcache-alpine-${arch}`;
     }
+    return undefined;
 }
 async function getPlatformInfo() {
     const platformOverride = core.getInput('platform');
@@ -28368,6 +28358,7 @@ async function getPlatformInfo() {
     const isWindows = normalizedOS === 'Windows';
     const arch = normalizedArch === 'ARM64' ? 'arm64' : 'amd64';
     let assetName;
+    let fallbackAssetName;
     switch (normalizedOS) {
         case 'Linux': {
             const distro = detectLinuxDistro();
@@ -28375,6 +28366,7 @@ async function getPlatformInfo() {
                 core.info(`Detected Linux distro: ${distro.id} ${distro.versionId} (${distro.codename})`);
             }
             assetName = getLinuxAssetName(distro, arch);
+            fallbackAssetName = getLinuxFallbackAssetName(distro, arch);
             break;
         }
         case 'macOS': {
@@ -28397,6 +28389,7 @@ async function getPlatformInfo() {
         os: normalizedOS.toLowerCase(),
         arch: normalizedArch.toLowerCase(),
         assetName,
+        fallbackAssetName,
         isWindows,
     };
 }
@@ -28434,17 +28427,33 @@ async function verifyFileChecksum(filePath, expectedChecksum) {
     core.info(`Checksum verified: ${actualChecksum}`);
 }
 async function downloadAndInstall(version, platform, verifyChecksumEnabled) {
-    const downloadUrl = getDownloadUrl(version, platform.assetName);
-    core.info(`Downloading BoringCache CLI from: ${downloadUrl}`);
-    const downloadedPath = await tc.downloadTool(downloadUrl);
+    let assetName = platform.assetName;
+    let downloadedPath;
+    try {
+        const downloadUrl = getDownloadUrl(version, assetName);
+        core.info(`Downloading BoringCache CLI from: ${downloadUrl}`);
+        downloadedPath = await tc.downloadTool(downloadUrl);
+    }
+    catch (error) {
+        if (platform.fallbackAssetName) {
+            const msg = error instanceof Error ? error.message : String(error);
+            core.info(`Primary asset ${assetName} not available (${msg}), trying fallback: ${platform.fallbackAssetName}`);
+            assetName = platform.fallbackAssetName;
+            const fallbackUrl = getDownloadUrl(version, assetName);
+            downloadedPath = await tc.downloadTool(fallbackUrl);
+        }
+        else {
+            throw error;
+        }
+    }
     if (verifyChecksumEnabled) {
-        const expectedChecksum = await getExpectedChecksum(version, platform.assetName);
+        const expectedChecksum = await getExpectedChecksum(version, assetName);
         if (expectedChecksum) {
             core.info('Verifying checksum...');
             await verifyFileChecksum(downloadedPath, expectedChecksum);
         }
         else {
-            core.warning(`No checksum available for ${version}/${platform.assetName} - skipping verification`);
+            core.warning(`No checksum available for ${version}/${assetName} - skipping verification`);
         }
     }
     const binaryName = platform.isWindows ? 'boringcache.exe' : 'boringcache';
