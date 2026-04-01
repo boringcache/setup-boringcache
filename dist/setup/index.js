@@ -28370,17 +28370,11 @@ async function getPlatformInfo() {
             break;
         }
         case 'macOS': {
-            const macVersion = await detectMacOSVersion();
-            if (macVersion && (macVersion === '15' || macVersion === '14')) {
-                assetName = `boringcache-macos-${macVersion}-arm64`;
-            }
-            else {
-                assetName = 'boringcache-macos-14-arm64';
-            }
+            assetName = 'boringcache-macos-universal';
             break;
         }
         case 'Windows':
-            assetName = 'boringcache-windows-2022-amd64.exe';
+            assetName = 'boringcache-windows-amd64.exe';
             break;
         default:
             throw new Error(`Unsupported platform: OS=${runnerOS}, ARCH=${runnerArch}`);

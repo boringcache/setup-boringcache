@@ -17,10 +17,22 @@ describe('parseChecksums', () => {
     const content = [
       'aaaa1234aaaa1234aaaa1234aaaa1234aaaa1234aaaa1234aaaa1234aaaa1234  boringcache-linux-arm64',
       'bbbb1234bbbb1234bbbb1234bbbb1234bbbb1234bbbb1234bbbb1234bbbb1234  boringcache-linux-amd64',
-      'cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234  boringcache-macos-14-arm64',
+      'cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234  boringcache-macos-universal',
+      'dddd1234dddd1234dddd1234dddd1234dddd1234dddd1234dddd1234dddd1234  boringcache-windows-amd64.exe',
     ].join('\n');
     expect(parseChecksums(content, 'boringcache-linux-amd64'))
       .toBe('bbbb1234bbbb1234bbbb1234bbbb1234bbbb1234bbbb1234bbbb1234bbbb1234');
+  });
+
+  it('finds generic macOS and Windows assets', () => {
+    const content = [
+      'cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234  boringcache-macos-universal',
+      'dddd1234dddd1234dddd1234dddd1234dddd1234dddd1234dddd1234dddd1234  boringcache-windows-amd64.exe',
+    ].join('\n');
+    expect(parseChecksums(content, 'boringcache-macos-universal'))
+      .toBe('cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234cccc1234');
+    expect(parseChecksums(content, 'boringcache-windows-amd64.exe'))
+      .toBe('dddd1234dddd1234dddd1234dddd1234dddd1234dddd1234dddd1234dddd1234');
   });
 
   it('matches filename at end of path', () => {
