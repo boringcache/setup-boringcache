@@ -1,0 +1,21 @@
+name: Retired repository contract
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify the tombstone is the only product surface
+        run: |
+          test -f README.md
+          test ! -e action.yml
+          test ! -e package.json
+          test ! -d dist
